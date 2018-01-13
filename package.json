@@ -1,0 +1,34 @@
+{
+  "name": "neuron",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "app": "ts-node -r tsconfig-paths/register src/Main.ts",
+    "build": "webpack"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/gaussian": "^1.1.1",
+    "@types/mathjs": "0.0.35",
+    "@types/node": "^8.0.51",
+    "@types/ramda": "^0.25.8",
+    "@types/underscore": "^1.8.5",
+    "@types/webpack": "^3.8.1",
+    "clean-webpack-plugin": "^0.1.17",
+    "ts-loader": "^3.1.0",
+    "ts-node": "^3.3.0",
+    "tsconfig-paths": "^2.3.0",
+    "typescript": "^2.6.1",
+    "webpack": "^3.8.1",
+    "webpack-node-externals": "^1.6.0"
+  },
+  "dependencies": {
+    "gaussian": "^1.1.0",
+    "mathjs": "^3.18.0",
+    "ramda": "^0.25.0",
+    "underscore": "^1.8.3"
+  }
+}
