@@ -6,7 +6,7 @@ const nodeExternals = require('webpack-node-externals')
 const { name, version } = require('./package.json')
 
 module.exports = {
-  entry: './src/Main.ts',
+  entry: './src/Network.ts',
   devtool: 'inline-source-map',
   target: 'node',
   externals: [nodeExternals()],

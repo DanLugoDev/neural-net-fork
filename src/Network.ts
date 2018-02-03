@@ -1,4 +1,4 @@
-import { zipWith, splitEvery, range, tail, init, last } from 'ramda'
+import { zipWith, splitEvery, range, tail, init, head, last } from 'ramda'
 
 
 
@@ -6,8 +6,10 @@ import { sigmoid, sigmoidPrime }                from '@app/Math'
 import { InOut, InDigit }                       from '@app/Data'
 import { shuffle }                              from 'underscore'
 import { FillFn, Vec, newVec, isVec, Mat,
-         isMat, newMat, vecPlusVec,
-         vecMinusVec, vecTimesMat, hadamard }   from '@app/Algebra'
+         newMat, vecPlusVec, scalarTimesVec,
+         scalarTimesMat, matPlusMat,
+         matMinusMat, vecMinusVec, vecTimesMat,
+         hadamard }                             from '@app/Algebra'
 
 const gaussian = require('gaussian')
 // mean 0 variance 1
@@ -91,7 +93,7 @@ export default class Network {
    * One vector for each layer (variable length), one bias for each neuron
    * @type {Vec[]}
    */
-  private readonly biases : Vec[]
+  private biases : Vec[]
 
 
   /**
@@ -126,39 +128,40 @@ export default class Network {
   constructor (sizes : Vec) {
     this.sizes = sizes
     this.numLayers = this.sizes.length
-    this.biases = Network.spawnBiases(sizes, sample)
-    this.weights = Network.spawnWeights(sizes, sample)
+    this.biases = Network.spawnBiases(this.sizes, sample)
+    this.weights = Network.spawnWeights(this.sizes, sample)
   }
 
 
   /**
-   * Return the output of the network if ``a`` is input.
+   * Return the output of the network given an input.
    *
-   * @param {Vec} input input vector to the neural network
+   * @param {Vec} input Vector to the neural network
    */
   feedforward (input : Vec) : Vec {
     if (!isVec(input)) throw new TypeError('expected vector as argument')
+
     if (input.length != this.sizes[0]) {
       throw new TypeError(
         'Vector length incorrect, should be the same length as the input layer'
       )
     }
 
-    let activations : Vec = input
+    let activation : Vec = input
 
     zipWith<Vec, Mat, void>(
       (layerBiases: Vec, layerWeights: Mat) => {
-        let weighted : Vec = vecTimesMat(activations, layerWeights)
-        let biased : Vec = vecPlusVec(weighted, layerBiases)
-        let squished : Vec = biased.map(sigmoid)
+        let weighted : Vec = vecTimesMat(activation, layerWeights)
+        let z : Vec = vecPlusVec(weighted, layerBiases)
+        let squashed : Vec = z.map(sigmoid)
 
-        activations = squished
+        activation = squashed
       },
       this.biases,
       this.weights
     )
 
-    return activations
+    return activation
   }
 
 
@@ -180,9 +183,7 @@ export default class Network {
     miniBatchSize : number,
     eta : number,
     testData? : InDigit[]
-  ) {
-    let nTest : number | undefined = testData ? testData.length : undefined
-
+  ) : void {
     range(0, epochs).forEach(i => {
       const shuffled : InOut[] = shuffle(trainingData)
       const miniBatches : InOut[][] = splitEvery(miniBatchSize, shuffled)
@@ -191,9 +192,8 @@ export default class Network {
         this.updateMiniBatch(miniBatch, eta)
       }
 
-
       if (testData) {
-        console.log(`Epoch ${i}: ${this.evaluate(testData)} / ${nTest} `)
+        console.log(`Epoch ${i}: ${this.evaluate(testData)} correct / ${testData.length} `)
       } else {
         console.log(`Epoch ${i} complete`)
       }
@@ -208,25 +208,34 @@ export default class Network {
    * inputs and the desired outputs. A subset of all training examples.
    * @param eta The learning rate
    */
-  updateMiniBatch (miniBatch : InOut[], eta : number) {
+  updateMiniBatch (miniBatch : InOut[], eta : number) : void {
     const normalEta : number = eta / miniBatch.length
+    const scaleLayerBiasesByEta : (v : Vec) => Vec =
+      scalarTimesVec.bind(null, normalEta)
+    const scaleLayerWeightsByEta : (m : Mat) => Mat =
+      scalarTimesMat.bind(null, normalEta)
 
-    let [ nablaB , nablaW ] =
-      [ Network.spawnBiases(this.sizes), Network.spawnWeights(this.sizes) ]
+    let deltaNablaB : Vec[]
+    let deltaNablaW : Mat[]
 
-
+    [ deltaNablaB, deltaNablaW ] =
+      [ Network.spawnBiases(this.sizes) , Network.spawnWeights(this.sizes) ]
 
     for (const inOut of miniBatch) {
-      const [ givenIn, expectedOut ] = inOut
-      const [ deltaNablaB , deltaNablaW ] = this.backprop(givenIn, expectedOut)
+      const [ givenIn , expectedOut ] = inOut
+      const [ diffDeltaNablaB , diffDeltaNablaW ] =
+        this.backprop(givenIn, expectedOut)
 
-      range(0, nablaB.length)
-      nablaW = zipWith(add, nablaW, deltaNablaW) as Mat[]
+      deltaNablaB = zipWith(vecPlusVec, deltaNablaB, diffDeltaNablaB)
+      deltaNablaW = zipWith(matPlusMat, deltaNablaW, diffDeltaNablaW)
     }
 
+    const scaledDeltaNablaB : Vec[] = deltaNablaB.map(scaleLayerBiasesByEta)
+    const scaledDeltaNablaW : Mat[] = deltaNablaW.map(scaleLayerWeightsByEta)
 
+    this.biases = zipWith(vecMinusVec, this.biases, scaledDeltaNablaB)
 
-
+    this.weights = zipWith(matMinusMat, this.weights, scaledDeltaNablaW)
   }
 
 
@@ -242,7 +251,7 @@ export default class Network {
    * @param expectedOut
    */
   backprop (givenIn : Vec, expectedOut : Vec) : [ Vec[], Mat[] ] {
-    if (givenIn.length != this.sizes[0]) {
+    if (givenIn.length != head(this.sizes)) {
       throw new TypeError(
         'givenIn vector incorrect length, should be same length as input layer'
       )
@@ -254,8 +263,10 @@ export default class Network {
       )
     }
 
+    let deltaNablaB : Vec[]
+    let deltaNablaW : Mat[]
 
-    let [ deltaNablaB , deltaNablaW ] =
+    [ deltaNablaB , deltaNablaW ] =
       [ Network.spawnBiases(this.sizes), Network.spawnWeights(this.sizes) ]
 
     // feedforward
@@ -266,10 +277,9 @@ export default class Network {
     let zs : Vec[] = []
     // Dan: for backward pass
     let delta : Vec
-    let output : Vec | undefined
-    let outputZ : Vec | undefined
     let costDerivative : Vec
-    let zDeriv : Vec
+    let lastActivation : Vec | undefined
+    let lastZ : Vec | undefined
 
     zipWith(
       (layerBiases : Vec, layerWeights : Mat) => {
@@ -283,9 +293,9 @@ export default class Network {
       this.weights
     )
 
-    // Dan: mantener en cuenta para entendimiento del codigo: al terminar
-    // las iteraciones del zipWith la ultima z en zs y la ultima activation
-    // en activations seran vectores con longitud de la capa de salida
+    // Dan: keep in mind to understand the code: after the zipWith above
+    // the last Z in zs and the last activation in activations will be
+    // vectors of length equal the output layer's length.
     //
     // Estos vienen siendo output y outputZ por eso se pueden operar
     // safely with the expectedOut vector, and the delta vector can be
@@ -295,29 +305,44 @@ export default class Network {
     // number of neurons in the previous-to-last layer
 
     // backwards pass
-    output = last(activations)
-    outputZ = last(zs)
-
-    if (typeof output == 'undefined' || typeof outputZ == 'undefined') {
-      throw new Error('Oops something wrong ocurred')
+    lastActivation = last(activations)
+    lastZ = last(zs)
+    if (typeof lastActivation == 'undefined') {
+      throw new ReferenceError('lastActivation is undefined. Check you set a correct number of layers or else there\'s a bug in the app.')
+    }
+    if (typeof lastZ == 'undefined') {
+      throw new ReferenceError('lastZ is undefined. Check you set a correct number of layers or else there\'s a bug in the app.')
     }
 
-    costDerivative = vecMinusVec(output, expectedOut)
-    zDeriv = outputZ.map(sigmoidPrime)
-
-    delta = hadamard(costDerivative, zDeriv)
-
+    costDerivative = vecMinusVec(lastActivation, expectedOut)
+    delta = hadamard(costDerivative, lastZ.map(sigmoidPrime))
     deltaNablaB[deltaNablaB.length - 1] = delta
-    // Dan: Python: np.dot(delta, activations[-2].transpose()) ??????
-    deltaNablaW[deltaNablaW.length - 1] = vecTimesMat(delta, activations[-1])
 
 
+    //deltaNablaW[deltaNablaW.length - 1] = vecTimesMat()
+    /**
+     * Note that the variable l in the loop below is used a little
+     * differently to the notation in Chapter 2 of the book.  Here,
+     * l = 1 means the last layer of neurons, l = 2 is the
+     * second-last layer, and so on.  It's a renumbering of the
+     * scheme in the book, used here to take advantage of the fact
+     * that Python can use negative indices in lists.
+     */
 
+    range(2, this.numLayers).forEach(l => {
+      const z = zs[zs.length - l]
+      const sp = z.map(sigmoidPrime)
 
+      delta = vecTimes(
+        sp,
 
+      )
 
+      deltaNablaB[deltaNablaB.length - l] = delta
+      deltaNablaW[deltaNablaW.length - l] =
+    })
 
-
+    return [ deltaNablaB , deltaNablaW ]
   }
 
 
@@ -331,15 +356,26 @@ export default class Network {
    * @param testData
    */
   evaluate (testData : InDigit[]) : number {
+    const testResults : boolean[] = []
+
+
     for (const testExample of testData) {
       const [ inputVector , expectedDigit ] = testExample
+      const networkOutput : Vec = this.feedforward(inputVector)
 
+      const digitPredicted : number = networkOutput.reduce(
+        (max : number, value : number) => Math.max(max, value),
+        0
+      )
+
+      testResults.push(digitPredicted == expectedDigit)
     }
 
 
-
-
-
+    return testResults.reduce(
+      // Number(true) => 1 , Number(false) => 0
+      (counter : number, result : boolean) => counter + Number(result),
+      0
+    )
   }
-
 }

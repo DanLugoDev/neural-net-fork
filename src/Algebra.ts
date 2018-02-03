@@ -28,12 +28,15 @@ export type Tensor = Vec | Mat
  * Create a new Vec.
  *
  * @param {number} length length of the resulting Vec
- * @param {FillFn} fillFn returns a number to fill each index with
+ * @param {FillFn=} fillFn returns a number to fill each index with
  */
 export const newVec =
-  (length : number, fillFn? : FillFn) : Vec => (new Array(length))
-    .fill(null)
-    .map(fillFn ? fillFn : zero)
+  (length : number, fillFn : FillFn = zero) : Vec =>
+    (new Array(length))
+      .fill(null)
+      .map(fillFn)
+
+
 
 /**
  * Vectorize a number, basically puts it in a Vec in a provided index and
@@ -55,7 +58,8 @@ export const Vectorize =
  * @param {Tensor} tensor The tensor to be checked if it's a Vec
  */
 export const isVec =
-  (tensor : Tensor) : tensor is Vec => all(is(Number))(tensor)
+  (tensor : Tensor) : tensor is Vec =>
+    all(is(Number))(tensor)
 
 
 /**
@@ -64,14 +68,15 @@ export const isVec =
  * @param {Tensor} tensor The tensor to be checked if it's a Mat
  */
 export const isMat =
-  (tensor : Tensor) : tensor is Mat => all(is(isVec))(tensor)
+  (tensor : Tensor) : tensor is Mat =>
+    all(is(isVec))(tensor)
 
 
 
 export const newMat =
-  (rows : number, cols : number, fillFn? : FillFn) : Mat =>
+  (rows : number, cols : number, fillFn : FillFn = zero) : Mat =>
     (new Array(rows))
-      .fill(newVec(cols, fillFn ? fillFn : zero))
+      .fill(newVec(cols, fillFn))
 
 
 
@@ -84,7 +89,7 @@ export const newMat =
 
 export const vecPlusVec = (v : Vec, w : Vec) : Vec => {
   if (!isVec(v) || !isVec(w)) {
-    throw new TypeError('Expected Vecs as arguments')
+    throw new TypeError('Expected 2 Vectors as arguments')
   }
   return zipWith<number, number, number>(add, v, w)
 }
@@ -110,6 +115,7 @@ export const hadamard = (v : Vec, w : Vec) : Vec => {
   if (!isVec(v) || !isVec(w)) {
     throw new TypeError('Expected Vecs as arguments')
   }
+  if (v.length != w.length) throw new TypeError('Vecs should be same length')
   return zipWith<number, number, number>(multiply, v, w)
 }
 

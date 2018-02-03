@@ -8,20 +8,20 @@
 
 
 
-import { Vector, Matrix } from '@app/Algebra'
+import { Vec, Mat } from '@app/Algebra'
 
 // A pair of the input and correct output vectors.
 // Using Pair<> to ensure this type will always be two vectors in length.
 // As opposed to a variable dimensions matrix
-export type InOut = [Vector, Vector]
+export type InOut = [Vec, Vec]
 
 // A pair of the input vector, and the correct non-vectorized number primitive
 // corresponding to that input vector.
-export type InDigit = [Vector, number]
+export type InDigit = [Vec, number]
 
 // an array of the images, and an array of the correct non-vectorized number
 // primitives corresponding
-type RawData = [Matrix, number]
+type RawData = [Mat, number]
 /**
  * Return the MNIST data as a tuple containing the training data,
     the validation data, and the test data.
@@ -54,23 +54,22 @@ export const loadData = () : [RawData, RawData, RawData] => {
  * Return a tuple containing ``(training_data, validation_data, test_data)``.
  * Based on ``load_data``, but the format is more convenient for use in our
  * implementation of neural networks.
- * 
- * In particular, ``training_data`` is a list containing 50,000 2-tuples 
- * ``(x, y)``.  ``x`` is a 784-dimensional numpy.ndarray containing the input 
- * image.  ``y`` is a 10-dimensional numpy.ndarray representing the unit vector 
+ *
+ * In particular, ``training_data`` is a list containing 50,000 2-tuples
+ * ``(x, y)``.  ``x`` is a 784-dimensional numpy.ndarray containing the input
+ * image.  ``y`` is a 10-dimensional numpy.ndarray representing the unit vector
  * corresponding to the correct digit for ``x``.
- * 
+ *
  * ``validation_data`` and ``test_data`` are lists containing 10,000 2-tuples
  * ``(x, y)``.  In each case, ``x`` is a 784-dimensional numpy.ndarry containing
  * the input image, and ``y`` is the corresponding classification, i.e., the
  * digit values (integers) corresponding to ``x``.
- * 
+ *
  * Obviously, this means we're using slightly different formats for the training
- * data and the validation / test data.  These formats turn out to be the most 
+ * data and the validation / test data.  These formats turn out to be the most
  * convenient for use in our neural network code.
  */
 export const loadDataWrapper =
   () : [InOut[], InDigit[], InDigit[]] => {
 
   }
-
