@@ -16,10 +16,8 @@ export const softplus = (n : number) : number => {
 
 
 
-export const rnd = (low? : number, high? : number) : number => {
-  const lo : number = low ? low : 0
-  const hi : number = high ? high : 1
-  return Math.floor((Math.random() * (lo - hi)) + lo)
+export const rnd = (low : number = 0, high : number = 1) : number => {
+  return Math.floor((Math.random() * (low - high)) + low)
 }
 
 
@@ -27,41 +25,3 @@ export const rnd = (low? : number, high? : number) : number => {
 
 
 export const gaussRnd = () => (Math.random() - 0.5) * 10
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

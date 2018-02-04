@@ -1,4 +1,4 @@
-import { zipWith, splitEvery, range, tail, init, head, last } from 'ramda'
+import { transpose, zipWith, splitEvery, range, tail, init, head, last } from 'ramda'
 
 
 
@@ -9,7 +9,7 @@ import { FillFn, Vec, newVec, isVec, Mat,
          newMat, vecPlusVec, scalarTimesVec,
          scalarTimesMat, matPlusMat,
          matMinusMat, vecMinusVec, vecTimesMat,
-         hadamard }                             from '@app/Algebra'
+         hadamard, dot }                             from '@app/Algebra'
 
 const gaussian = require('gaussian')
 // mean 0 variance 1
@@ -19,13 +19,6 @@ const distribution = gaussian(0, 1)
  * @returns {number} the random sample
  */
 const sample = () : number => distribution.ppf(Math.random())
-
-
-
-
-
-
-
 
 
 
@@ -126,6 +119,9 @@ export default class Network {
    * ever used in computing the outputs from later layers.
    */
   constructor (sizes : Vec) {
+    if (sizes.length < 3) {
+      throw new RangeError('The layer should have at least 3 layers, one input layer, one hidden layer and one output layer')
+    }
     this.sizes = sizes
     this.numLayers = this.sizes.length
     this.biases = Network.spawnBiases(this.sizes, sample)
@@ -193,7 +189,7 @@ export default class Network {
       }
 
       if (testData) {
-        console.log(`Epoch ${i}: ${this.evaluate(testData)} correct / ${testData.length} `)
+        console.log(`Epoch ${i}: ${this.evaluate(testData)} numbers correctly identified out of ${testData.length} `)
       } else {
         console.log(`Epoch ${i} complete`)
       }
@@ -266,8 +262,7 @@ export default class Network {
     let deltaNablaB : Vec[]
     let deltaNablaW : Mat[]
 
-    [ deltaNablaB , deltaNablaW ] =
-      [ Network.spawnBiases(this.sizes), Network.spawnWeights(this.sizes) ]
+
 
     // feedforward
     let activation : Vec = givenIn
@@ -279,7 +274,11 @@ export default class Network {
     let delta : Vec
     let costDerivative : Vec
     let lastActivation : Vec | undefined
+    let secondToLastAct : Vec
     let lastZ : Vec | undefined
+
+    [ deltaNablaB , deltaNablaW ] =
+      [ Network.spawnBiases(this.sizes), Network.spawnWeights(this.sizes) ]
 
     zipWith(
       (layerBiases : Vec, layerWeights : Mat) => {
@@ -318,8 +317,9 @@ export default class Network {
     delta = hadamard(costDerivative, lastZ.map(sigmoidPrime))
     deltaNablaB[deltaNablaB.length - 1] = delta
 
-
-    //deltaNablaW[deltaNablaW.length - 1] = vecTimesMat()
+    secondToLastAct = activations[activations.length -2]
+    deltaNablaW[deltaNablaW.length - 1] =
+      delta.map(deltaB => scalarTimesVec(deltaB, secondToLastAct))
     /**
      * Note that the variable l in the loop below is used a little
      * differently to the notation in Chapter 2 of the book.  Here,
@@ -328,18 +328,21 @@ export default class Network {
      * scheme in the book, used here to take advantage of the fact
      * that Python can use negative indices in lists.
      */
-
-    range(2, this.numLayers).forEach(l => {
-      const z = zs[zs.length - l]
+    /**
+     * Dan: We'll use arr[arr.length - l] as the equivalent except for
+     * l = 0, however, l here wont ever be zero.
+     *
+     * Also I took the liberty to change the variable here to k, as l looks a
+     * lot like 1 (one) so the code gets confusing
+     */
+    //
+    range(2, this.numLayers).forEach(k => {
+      const z = zs[zs.length - k]
       const sp = z.map(sigmoidPrime)
-
-      delta = vecTimes(
-        sp,
-
-      )
-
-      deltaNablaB[deltaNablaB.length - l] = delta
-      deltaNablaW[deltaNablaW.length - l] =
+      const deltaedWeights : Vec = transpose(this.weights[this.weights.length -k + 1]).map(w => dot(w, delta))
+      delta = hadamard(deltaedWeights, sp)
+      deltaNablaB[deltaNablaB.length - k] = delta
+      deltaNablaW[deltaNablaW.length - k] = delta.map(elm => scalarTimesVec(elm, activations[activations.length - k - 1]))
     })
 
     return [ deltaNablaB , deltaNablaW ]

@@ -8,20 +8,41 @@
 
 
 
-import { Vec, Mat } from '@app/Algebra'
 
-// A pair of the input and correct output vectors.
-// Using Pair<> to ensure this type will always be two vectors in length.
-// As opposed to a variable dimensions matrix
+const fs = require('fs')
+
+import { zipWith } from 'ramda'
+
+import { Vec, Mat, newVec } from '@app/Algebra'
+
+
+
+// Given an input vector, which vector should the output layer be?
 export type InOut = [Vec, Vec]
 
-// A pair of the input vector, and the correct non-vectorized number primitive
-// corresponding to that input vector.
+// Given an input vector, which number should the output layer represent?
 export type InDigit = [Vec, number]
 
-// an array of the images, and an array of the correct non-vectorized number
-// primitives corresponding
-type RawData = [Mat, number]
+// [images[] , digit it correspons to [] ]
+type RawData = [Vec[], number[]]
+
+
+/**
+ * vectorize(5, 3) => [0, 0, 0, 1, 0]
+ *
+ * @param {number} len length of the resulting Vec
+ * @param {number} n the number, also de index where the 1 will be positioned
+ */
+export const vectorize = (len : number, n : number) : Vec => {
+  if (n >= len) throw new RangeError()
+
+  return newVec(len)
+    .map((_,i) => i == n ? 1 : 0)
+}
+
+
+
+
 /**
  * Return the MNIST data as a tuple containing the training data,
     the validation data, and the test data.
@@ -46,7 +67,38 @@ type RawData = [Mat, number]
     below.
  */
 export const loadData = () : [RawData, RawData, RawData] => {
+  let buffer : Buffer
+  let trainingData : RawData, validationData : RawData, testData : RawData
+  let data : {
+    training_data : RawData ,
+    validation_data : RawData ,
+    test_data : RawData
+  }
 
+
+
+  try {
+    buffer = fs.readFileSync('data/mnist.json')
+  } catch (e) {
+    throw new Error('couldnt load the data file')
+  }
+
+  try {
+    data = JSON.parse(buffer.toString())
+  } catch (e) {
+    throw new Error('couldnt parse the data  ' + e.message)
+  }
+
+
+
+
+
+
+  trainingData = data.training_data
+  validationData = data.validation_data
+  testData = data.test_data
+
+  return [ trainingData , validationData , testData ]
 }
 
 
@@ -69,7 +121,34 @@ export const loadData = () : [RawData, RawData, RawData] => {
  * data and the validation / test data.  These formats turn out to be the most
  * convenient for use in our neural network code.
  */
-export const loadDataWrapper =
-  () : [InOut[], InDigit[], InDigit[]] => {
+export const loadDataWrapper = () : [InOut[], InDigit[], InDigit[]] => {
+  let [ trD, vD, teD ] = loadData()
 
+  let triple : [InOut[], InDigit[], InDigit[]]
+  // type RawData = [Vec[], number[]]
+
+  const convertTrD = (origTrD : RawData) : InOut[] => {
+    const images : Vec[] = origTrD[0]
+    const digits : number[] = origTrD[1]
+    const vectorized : Vec[] = digits.map<Vec>(vectorize.bind(null, 10))
+
+    return zipWith<Vec, Vec, [Vec, Vec]>(
+      (img : Vec, dv : Vec) => [img, dv],
+      images,
+      vectorized
+    )
   }
+
+  const convert = (rd : RawData) : InDigit[] => {
+    const images : Vec[] = rd[0]
+    const digits : number[] = rd[1]
+
+    return zipWith<Vec, number, [Vec, number]>(
+      (img : Vec, d : number) => [img, d],
+      images,
+      digits
+    )
+  }
+
+  return [ convertTrD(trD) , convert(vD), convert(teD)]
+}

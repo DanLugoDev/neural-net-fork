@@ -1,4 +1,4 @@
-import { zipWith, add, multiply, subtract, all, is, transpose } from 'ramda'
+import { propEq, head, zipWith, add, multiply, subtract, all, is, transpose } from 'ramda'
 
 export type FillFn = () => number
 
@@ -19,10 +19,21 @@ export type Vec = number[]
  */
 export type Mat = Vec[]
 
+//TODO: Array<any> -> Vec | Mat
 /**
  * Both Mates and Vecs are Tensors
  */
-export type Tensor = Vec | Mat
+export type Tensor = Array<any>
+
+
+const allSameLength = (list : any[]) : boolean =>  {
+  if (list.length < 1) return false
+
+  const len : number = head(list).length
+
+  return all(propEq('length', len))(list)
+}
+
 
 /**
  * Create a new Vec.
@@ -38,27 +49,16 @@ export const newVec =
 
 
 
-/**
- * Vectorize a number, basically puts it in a Vec in a provided index and
- * all other values will be zero.
- *
- * Vecize(4, 1, 99) => [0, 99, 0, 0]
- *
- * @param {number} len length of the resulting Vec
- * @param {number} idx index where the number will be positioned
- */
-export const Vectorize =
-  (len : number, idx : number, value : number) : Vec =>
-    newVec(len, zero)
-      .map((_,i) => i == idx ? value : 0)
 
+
+//TODO: change booleans to tensor is X
 /**
  * Check the Tensor provided is a valid Vec.
  *
  * @param {Tensor} tensor The tensor to be checked if it's a Vec
  */
 export const isVec =
-  (tensor : Tensor) : tensor is Vec =>
+  (tensor : Tensor) : boolean =>
     all(is(Number))(tensor)
 
 
@@ -68,15 +68,16 @@ export const isVec =
  * @param {Tensor} tensor The tensor to be checked if it's a Mat
  */
 export const isMat =
-  (tensor : Tensor) : tensor is Mat =>
-    all(is(isVec))(tensor)
+  (tensor : Tensor) : boolean =>
+    all(isVec, tensor) && allSameLength(tensor)
 
 
 
 export const newMat =
   (rows : number, cols : number, fillFn : FillFn = zero) : Mat =>
     (new Array(rows))
-      .fill(newVec(cols, fillFn))
+      .fill(null)
+      .map(_ => newVec(cols, fillFn))
 
 
 
@@ -104,6 +105,7 @@ export const vecMinusVec = (v : Vec, w : Vec) : Vec => {
 
 
 export const scalarTimesVec = (s : number, v : Vec) : Vec => {
+
   if ((typeof s != 'number') || !isVec(v)) {
     throw new TypeError('Expected a number and a vector as arguments')
   }
