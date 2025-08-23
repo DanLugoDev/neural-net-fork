@@ -2,7 +2,7 @@ import Network from '@app/Network'
 
 import {loadDataWrapper} from '@app/Data'
 
-const [ trainingData, validationData, testData ] = loadDataWrapper()
+const [ trainingData, , testData ] = loadDataWrapper()
 
 
 const net = new Network([784, 30, 10])

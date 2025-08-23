@@ -1,17 +1,13 @@
-import { zipWith, splitEvery, range, tail, init, head, last, transpose } from 'ramda'
+import { zipWith, range, tail, init, last, transpose } from 'ramda'
 
 import { sigmoid, sigmoidPrime }                from '@app/Math'
-import { InOut, InDigit }                       from '@app/Data'
-import { shuffle }                              from 'underscore'
-import { FillFn, Vec, newVec, isVec, Mat,
+import { Vec, newVec, Mat,
          newMat, vecPlusVec, scalarTimesVec,
-         scalarTimesMat, matPlusMat,
-         matMinusMat, vecMinusVec, vecTimesMat,
+         vecMinusVec, vecTimesMat,
          hadamard, dot }                             from '@app/Algebra'
 
 
 const fs = require('fs')
-const gaussian = require('gaussian')
 
 let entry : Vec
 let sizes : Vec

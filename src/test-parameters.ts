@@ -1,13 +1,6 @@
-import { zipWith, splitEvery, range, tail, init, head, last } from 'ramda'
+import { zipWith, tail, init } from 'ramda'
 
-import { sigmoid, sigmoidPrime }                from '@app/Math'
-import { InOut, InDigit }                       from '@app/Data'
-import { shuffle }                              from 'underscore'
-import { FillFn, Vec, newVec, isVec, Mat,
-         newMat, vecPlusVec, scalarTimesVec,
-         scalarTimesMat, matPlusMat,
-         matMinusMat, vecMinusVec, vecTimesMat,
-         hadamard }                             from '@app/Algebra'
+import { FillFn, Vec, newVec, Mat, newMat} from '@app/Algebra'
 
 const fs = require('fs')
 
