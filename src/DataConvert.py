@@ -9,7 +9,6 @@ in the typescript part of the app
 Made for python 3 or python 2
 """
 
-import numpy as np
 import json
 import gzip
 
@@ -24,17 +23,6 @@ f = gzip.open('data/mnist.pkl.gz', 'rb')
 training_data, validation_data, test_data = pickle.load(f, encoding="latin1")
 
 f.close()
-
-""" Convert numpy arrays to lists to enable json serialization """
-
-def converter (td):
-    tdfirst = td[0].tolist()
-    tdsecond = td[1].tolist()
-
-
-    """tdfirst = list(map(lambda npa: npa.tolist(), tdfirst))"""
-
-
 
 data = { \
     "training_data": [ training_data[0].tolist() , training_data[1].tolist() ] , \

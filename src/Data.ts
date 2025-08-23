@@ -13,7 +13,7 @@ const fs = require('fs')
 
 import { zipWith } from 'ramda'
 
-import { Vec, Mat, newVec } from '@app/Algebra'
+import { Vec, newVec } from '@app/Algebra'
 
 
 
