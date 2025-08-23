@@ -23,7 +23,7 @@ export type InOut = [Vec, Vec]
 // Given an input vector, which number should the output layer represent?
 export type InDigit = [Vec, number]
 
-// [images[] , digit it correspons to [] ]
+// [images[] , digit it corresponds to [] ]
 type RawData = [Vec[], number[]]
 
 
