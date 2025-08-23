@@ -9,7 +9,7 @@ const gaussian = require('gaussian')
 const distribution = gaussian(0, 1)
 /**
 * Take a random sample using inverse transform sampling method.
-* @returns {number} the random sample
+* @returns the random sample
 */
 const sample : FillFn = () => distribution.ppf(Math.random())
 
