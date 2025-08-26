@@ -7,9 +7,9 @@
     "app": "ts-node -r tsconfig-paths/register src/Network.ts",
     "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:data": "ts-node -r tsconfig-paths/register src/Data.ts",
     "test:math": "ts-node -r tsconfig-paths/register src/test-math.ts",
     "test:parameters": "ts-node -r tsconfig-paths/register src/test-parameters.ts",
-    "test:data": "ts-node -r tsconfig-paths/register src/Data.ts",
     "test:run": "ts-node -r tsconfig-paths/register src/test-run.ts"
   },
   "author": "",
