@@ -6,7 +6,7 @@
   "scripts": {
     "app": "ts-node -r tsconfig-paths/register src/Network.ts",
     "build": "webpack",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "run-s test:*",
     "test:data": "ts-node -r tsconfig-paths/register src/Data.ts",
     "test:math": "ts-node -r tsconfig-paths/register src/test-math.ts",
     "test:parameters": "ts-node -r tsconfig-paths/register src/test-parameters.ts",
@@ -32,6 +32,7 @@
   "dependencies": {
     "gaussian": "^1.1.0",
     "mathjs": "^3.18.0",
+    "npm-run-all": "^4.1.5",
     "ramda": "^0.25.0",
     "underscore": "^1.8.3"
   }
