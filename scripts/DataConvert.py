@@ -31,4 +31,4 @@ data = { \
 }
 
 with open('data/mnist.json', 'w') as outfile:
-    json.dump(data, outfile, indent=2)
+    json.dump(data, outfile)
