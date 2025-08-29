@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "app": "ts-node -r tsconfig-paths/register src/Network.ts",
+    "serve": "python3 -m http.server 8000",
     "test": "run-s test:*",
     "test:data": "ts-node -r tsconfig-paths/register src/Data.ts",
     "test:math": "ts-node -r tsconfig-paths/register src/test-math.ts",
