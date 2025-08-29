@@ -360,12 +360,17 @@ export default class Network {
 
     for (const testExample of testData) {
       const [ inputVector , expectedDigit ] = testExample
+
+      console.log(`Evaluating vector, expecting ${expectedDigit}`)
+
       const networkOutput : Vec = this.feedforward(inputVector)
 
       const digitPredicted : number = networkOutput.reduce(
         (max : number, value : number) => Math.max(max, value),
         0
       )
+
+      console.log(`Digit predicted: ${digitPredicted}`)
 
       testResults.push(digitPredicted == expectedDigit)
     }
