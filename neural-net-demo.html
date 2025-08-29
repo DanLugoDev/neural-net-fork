@@ -68,7 +68,8 @@
     <!-- Load the data -->
     <script type="module" id="data-script">
         // We'll load the data as a module
-        import { threeImage, weights, biases } from './src/web/data.js';
+        import { weights, biases } from './data/default-net.js';
+        import { threeImage } from './data/threeImage.js';
         window.neuralNetData = { threeImage, weights, biases };
         
         // Dispatch event when data is loaded
