@@ -1,3 +1,4 @@
+import * as fs from 'fs'
 import { transpose, zipWith, splitEvery, range,
          tail, init, head, last }               from 'ramda'
 import { shuffle }                               from 'underscore'
@@ -77,7 +78,7 @@ export default class Network {
    * The number of layers in the neural network
 
    */
-  private readonly numLayers : number
+  private numLayers : number
 
 
   /**
@@ -98,7 +99,7 @@ export default class Network {
   /**
    * A vector with the sizes of each layer.
    */
-  private readonly sizes : Vec
+  private sizes : Vec
 
 
   /**
@@ -344,8 +345,38 @@ export default class Network {
     return [ deltaNablaB , deltaNablaW ]
   }
 
+  ingress(fileName: string) {
+    const json = JSON.parse(fs.readFileSync(fileName, 'utf8'))
+    const biases = json.biases as number[][]
+    this.biases = biases
+    this.weights = json.weights
 
+    this.sizes = biases.map(b => b.length)
+    this.numLayers = json.biases.length
+  }
 
+  dump() {
+    const jsContent = `
+      export const weights = ${JSON.stringify(this.weights, null, 2)};
+      export const biases = ${JSON.stringify(this.biases, null, 2)};
+      `.trim();
+
+    const layerString = this.biases
+      ? [this.biases[0].length, ...this.biases.map(b => b.length)].join('-')
+      : 'unknown-layers';
+    fs.writeFileSync(
+      `net-${layerString}-${new Date().getTime()}.js`,
+      jsContent
+    );
+
+    fs.writeFileSync(
+      `net-${layerString}-${new Date().getTime()}.json`,
+      {
+        biases: this.biases,
+        weights: this.weights,
+      },
+    );
+  }
 
 
   /**
