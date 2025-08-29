@@ -348,11 +348,12 @@ export default class Network {
   ingress(fileName: string) {
     const json = JSON.parse(fs.readFileSync(fileName, 'utf8'))
     const biases = json.biases as number[][]
+    const weights = json.weights as number[][][]
     this.biases = biases
-    this.weights = json.weights
+    this.weights = weights
 
-    this.sizes = biases.map(b => b.length)
-    this.numLayers = json.biases.length
+    this.sizes = [784, ...weights.map(b => b.length)]
+    this.numLayers = this.sizes.length
   }
 
   dump() {
