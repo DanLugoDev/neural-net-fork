@@ -151,14 +151,18 @@
             threeImage = neuralNetData.threeImage;
             weights = neuralNetData.weights;
             biases = neuralNetData.biases;
+
+            const idxRange = (start, end) => Array.from({ length: end - start}, (_, i) => i);
+
+            console.log(
+            neuralNetData.biases.map(b => idxRange(0, b.length))
+        )
             
             // This array defines which neurons are visible on screen.
             // The null values indicate empty spaces (where the ... lives)
             const visibleNeurons = [
                 [0, 1, 2, 3, 4, 5, null, null, 778, 779, 780, 781, 782, 783],
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                ...neuralNetData.biases.map(b => idxRange(0, b.length)),
             ];
             
             function getNeuronPosition(layerIndex, visibleNeuronIndex) {
@@ -627,9 +631,9 @@
         }
         
         function WinningOutputNeuronBox({ neurons, animating, instant, getNeuronPosition }) {
-            const winningValue = Math.max(...neurons[3]);
-            const winningNeuron = neurons[3].indexOf(winningValue);
-            const position = getNeuronPosition(3, winningNeuron);
+            const winningValue = Math.max(...neurons[neurons.length - 1]);
+            const winningNeuron = neurons[neurons.length - 1].indexOf(winningValue);
+            const position = getNeuronPosition(neurons.length - 1, winningNeuron);
             
             return React.createElement('rect', {
                 x: position.x - 18,

@@ -362,9 +362,7 @@ export default class Network {
       export const biases = ${JSON.stringify(this.biases, null, 2)};
       `.trim();
 
-    const layerString = this.biases
-      ? [this.biases[0].length, ...this.biases.map(b => b.length)].join('-')
-      : 'unknown-layers';
+    const layerString = this.biases.map(b => b.length).join('-');
     fs.writeFileSync(
       `net-${layerString}-${new Date().getTime()}.js`,
       jsContent
@@ -372,10 +370,7 @@ export default class Network {
 
     fs.writeFileSync(
       `net-${layerString}-${new Date().getTime()}.json`,
-      {
-        biases: this.biases,
-        weights: this.weights,
-      },
+      JSON.stringify({ weights: this.weights, biases: this.biases }, null, 2),
     );
   }
 
