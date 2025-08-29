@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "app": "ts-node -r tsconfig-paths/register src/Network.ts",
-    "build": "webpack",
     "test": "run-s test:*",
     "test:data": "ts-node -r tsconfig-paths/register src/Data.ts",
     "test:math": "ts-node -r tsconfig-paths/register src/test-math.ts",
@@ -20,14 +19,10 @@
     "@types/node": "^8.0.51",
     "@types/ramda": "^0.25.8",
     "@types/underscore": "^1.8.5",
-    "@types/webpack": "^3.8.1",
-    "clean-webpack-plugin": "^0.1.17",
     "ts-loader": "^3.1.0",
     "ts-node": "^3.3.0",
     "tsconfig-paths": "^2.3.0",
-    "typescript": "^2.6.1",
-    "webpack": "^3.8.1",
-    "webpack-node-externals": "^1.6.0"
+    "typescript": "^2.6.1"
   },
   "dependencies": {
     "gaussian": "^1.1.0",
