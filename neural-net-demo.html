@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Interactive Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+        }
+        
+        #root {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        button {
+            background: #1C758A;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #0C7F99;
+        }
+        
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Neural Network Interactive Visualization</h1>
+    <div id="root"></div>
+    <div class="controls">
+        <p>Draw a digit in the input area to see how the neural network processes it!</p>
+    </div>
+    
+    <!-- React and Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Load the data -->
+    <script type="module" id="data-script">
+        // We'll load the data as a module
+        import { threeImage, weights, biases } from './src/web/data.js';
+        window.neuralNetData = { threeImage, weights, biases };
+        
+        // Dispatch event when data is loaded
+        window.dispatchEvent(new CustomEvent('dataLoaded'));
+    </script>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useMemo } = React;
+        
+        function App() {
+            const [dataLoaded, setDataLoaded] = useState(false);
+            const [neuralNetData, setNeuralNetData] = useState(null);
+            
+            useEffect(() => {
+                const handleDataLoaded = () => {
+                    if (window.neuralNetData) {
+                        setNeuralNetData(window.neuralNetData);
+                        setDataLoaded(true);
+                    }
+                };
+                
+                if (window.neuralNetData) {
+                    handleDataLoaded();
+                } else {
+                    window.addEventListener('dataLoaded', handleDataLoaded);
+                    return () => window.removeEventListener('dataLoaded', handleDataLoaded);
+                }
+            }, []);
+            
+            if (!dataLoaded) {
+                return (
+                    <div style={{ padding: '50px', textAlign: 'center' }}>
+                        <p>Loading neural network data...</p>
+                    </div>
+                );
+            }
+            
+            return <NeuralNetworkDemo neuralNetData={neuralNetData} />;
+        }
+        
+        function NeuralNetworkDemo({ neuralNetData }) {
+            const [mode, setMode] = useState('animated'); // 'animated' or 'instant'
+            
+            return (
+                <div>
+                    <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                        <button 
+                            onClick={() => setMode('animated')}
+                            style={{ 
+                                background: mode === 'animated' ? '#0C7F99' : '#1C758A'
+                            }}
+                        >
+                            Animated Mode
+                        </button>
+                        <button 
+                            onClick={() => setMode('instant')}
+                            style={{ 
+                                background: mode === 'instant' ? '#0C7F99' : '#1C758A'
+                            }}
+                        >
+                            Instant Mode
+                        </button>
+                    </div>
+                    
+                    <NeuralNetworkInteractive 
+                        instant={mode === 'instant'} 
+                        neuralNetData={neuralNetData}
+                    />
+                </div>
+            );
+        }
+        
+        // Insert the entire React component code here
+        // First, let's set up the data as globals for now
+        let threeImage, weights, biases;
+        
+        function NeuralNetworkInteractive({ instant = false, neuralNetData }) {
+            // Extract data
+            threeImage = neuralNetData.threeImage;
+            weights = neuralNetData.weights;
+            biases = neuralNetData.biases;
+            
+            // This array defines which neurons are visible on screen.
+            // The null values indicate empty spaces (where the ... lives)
+            const visibleNeurons = [
+                [0, 1, 2, 3, 4, 5, null, null, 778, 779, 780, 781, 782, 783],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            ];
+            
+            function getNeuronPosition(layerIndex, visibleNeuronIndex) {
+                const visibleNeuronsInLayer = visibleNeurons[layerIndex].length;
+                return {
+                    x: 230 + 115 * layerIndex,
+                    y: 240 + 28 * (visibleNeuronIndex - (visibleNeuronsInLayer - 1) / 2),
+                };
+            }
+            
+            const [points, setPoints] = useState(threeImage);
+            const [isNormalized, setIsNormalized] = useState(true);
+            const [normalizing, setNormalizing] = useState(false);
+            const [animating, setAnimating] = useState(false);
+            
+            // Update neuron values based on points the user draws
+            const [neurons, setNeurons] = useState(() => getNeuronValues(points));
+            
+            useEffect(() => {
+                if (instant || animating) {
+                    setNeurons(getNeuronValues(points));
+                }
+            }, [points, instant, animating]);
+            
+            const normalizePointsAnimated = (duration = 1.0) => {
+                setNormalizing(true);
+                
+                const data = collectNormalizationData(points);
+                
+                const startTime = Date.now();
+                const ease = (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+                
+                return new Promise((resolve) => {
+                    const frame = () => {
+                        const t = (Date.now() - startTime) / 1000;
+                        
+                        const newPoints = applyNormalizationTransformation(
+                            points,
+                            data,
+                            ease(Math.min(1, t / duration))
+                        );
+                        setPoints(newPoints);
+                        setIsNormalized(true);
+                        
+                        if (t < duration) {
+                            requestAnimationFrame(frame);
+                        } else {
+                            setNormalizing(false);
+                            resolve();
+                        }
+                    };
+                    
+                    frame();
+                });
+            };
+            
+            function animate() {
+                setAnimating(false);
+                
+                if (isNormalized) {
+                    setTimeout(() => setAnimating(true), 1);
+                } else {
+                    normalizePointsAnimated().then(() => {
+                        setTimeout(() => setAnimating(true), 200);
+                    });
+                }
+            }
+            
+            const [selectedNeuron, setSelectedNeuron] = useState(null);
+            
+            return React.createElement('svg', {
+                width: 640,
+                height: 480,
+                viewBox: "0 0 640 480",
+                style: {
+                    display: "block",
+                    maxWidth: "none",
+                    touchAction: "none",
+                }
+            }, [
+                React.createElement(NeuronConnections, {
+                    key: "connections",
+                    selectedNeuron,
+                    animating,
+                    instant,
+                    visibleNeurons,
+                    getNeuronPosition,
+                    weights
+                }),
+                
+                React.createElement(VerticalEllipsis, {
+                    key: "ellipsis",
+                    cx: 230,
+                    cy: 240
+                }),
+                
+                React.createElement(Neurons, {
+                    key: "neurons",
+                    neurons,
+                    selectedNeuron,
+                    setSelectedNeuron,
+                    animating,
+                    instant,
+                    visibleNeurons,
+                    getNeuronPosition
+                }),
+                
+                React.createElement(OutputDigitLabels, {
+                    key: "labels",
+                    visibleNeurons,
+                    getNeuronPosition
+                }),
+                
+                React.createElement(WinningOutputNeuronBox, {
+                    key: "winning",
+                    neurons,
+                    animating,
+                    instant,
+                    getNeuronPosition
+                }),
+                
+                // Weight grid for neurons in 2nd layer
+                selectedNeuron && selectedNeuron.layerIndex === 1 && (() => {
+                    const position = getNeuronPosition(
+                        selectedNeuron.layerIndex,
+                        selectedNeuron.neuronId
+                    );
+                    
+                    return React.createElement(WeightGrid, {
+                        key: "weightgrid",
+                        x: position.x + 20,
+                        y: -40 + (position.y - 240) * 0.85 + 240,
+                        width: 85,
+                        height: 85,
+                        weights: weights[0][selectedNeuron.neuronId],
+                        inputNeurons: neurons[0]
+                    });
+                })(),
+                
+                React.createElement(PiCreature, {
+                    key: "pi",
+                    animating,
+                    instant
+                }),
+                
+                // Black background while drawing
+                !instant && React.createElement('rect', {
+                    key: "background",
+                    x: "0",
+                    y: "0",
+                    width: "640",
+                    height: "480",
+                    fill: "black",
+                    style: {
+                        opacity: animating ? 0.0 : 1.0,
+                        pointerEvents: animating ? "none" : undefined,
+                        transition: "opacity 300ms ease-in-out",
+                    }
+                }),
+                
+                React.createElement(ImageGrid, {
+                    key: "imagegrid",
+                    instant,
+                    editing: !animating || instant,
+                    startEditing: () => {
+                        setAnimating(false);
+                        setPoints([]);
+                        setIsNormalized(false);
+                    },
+                    x: animating || instant ? 10 : 125,
+                    y: animating || instant ? 10 : 10,
+                    width: animating || instant ? 190 : 390,
+                    height: animating || instant ? 190 : 390,
+                    points,
+                    setPoints: (newPoints) => {
+                        setPoints(newPoints);
+                        setIsNormalized(false);
+                    },
+                    normalizing,
+                    isNormalized,
+                    normalizePointsAnimated,
+                    style: {
+                        transition: "transform 500ms ease-in-out",
+                    },
+                    beginAnimation: animate,
+                    highlightedTile: selectedNeuron && selectedNeuron.layerIndex === 0 
+                        ? selectedNeuron.neuronId 
+                        : null
+                })
+            ]);
+        }
+        
+        // Helper functions - putting them in global scope for now
+        
+        function dotProduct(vec1, vec2) {
+            let result = 0;
+            for (let i = 0; i < vec1.length; i++) {
+                result += vec1[i] * vec2[i];
+            }
+            return result;
+        }
+        
+        function matrixVectorMult(matrix, vector) {
+            let result = [];
+            for (let row = 0; row < matrix.length; row++) {
+                result.push(dotProduct(matrix[row], vector));
+            }
+            return result;
+        }
+        
+        function vectorAdd(vec1, vec2) {
+            let result = [];
+            for (let i = 0; i < vec1.length; i++) {
+                result.push(vec1[i] + vec2[i]);
+            }
+            return result;
+        }
+        
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+        
+        function getAllNeuronValues(firstLayer) {
+            let layers = [firstLayer];
+            
+            while (layers.length <= weights.length) {
+                const previousLayer = layers[layers.length - 1];
+                const weightMatrix = weights[layers.length - 1];
+                const biasVector = biases[layers.length - 1];
+                layers.push(
+                    vectorAdd(matrixVectorMult(weightMatrix, previousLayer), biasVector).map(
+                        sigmoid
+                    )
+                );
+            }
+            
+            return layers;
+        }
+        
+        function getInputNeuronValues(points) {
+            let values = new Array(28 ** 2).fill(0);
+            
+            for (const point of points) {
+                const { x, y } = point;
+                
+                values = values.map((value, n) => {
+                    const tileX = n % 28;
+                    const tileY = Math.floor(n / 28);
+                    
+                    const dist = Math.hypot(tileX - x, tileY - y);
+                    
+                    let penValue = 0.8 - (dist / 2) ** 2;
+                    penValue = Math.min(Math.max(0, penValue), 1);
+                    return value + (1 - value) * penValue;
+                });
+            }
+            
+            return values;
+        }
+        
+        function getNeuronValues(points) {
+            const inputNeurons = getInputNeuronValues(points);
+            return getAllNeuronValues(inputNeurons);
+        }
+        
+        function collectNormalizationData(points) {
+            const values = getInputNeuronValues(points);
+            
+            let left = Infinity;
+            let right = -Infinity;
+            let top = Infinity;
+            let bottom = -Infinity;
+            
+            let centerX = 0;
+            let centerY = 0;
+            let totalValue = 0;
+            
+            for (let n = 0; n < values.length; n++) {
+                const x = n % 28;
+                const y = Math.floor(n / 28);
+                const value = values[n];
+                
+                centerX += x * value;
+                centerY += y * value;
+                totalValue += value;
+                
+                if (value > 0.05) {
+                    left = Math.min(left, x);
+                    right = Math.max(right, x);
+                    top = Math.min(top, y);
+                    bottom = Math.max(bottom, y);
+                }
+            }
+            
+            centerX /= totalValue;
+            centerY /= totalValue;
+            
+            const width = right - left;
+            const height = bottom - top;
+            
+            const scale = 20 / Math.max(width, height);
+            
+            return { scale, centerX, centerY };
+        }
+        
+        function applyNormalizationTransformation(points, data, time = 1) {
+            const { scale, centerX, centerY } = data;
+            
+            return points.map((point) => {
+                let { x, y } = point;
+                
+                x -= centerX;
+                y -= centerY;
+                
+                x *= scale;
+                y *= scale;
+                
+                x += 14;
+                y += 14;
+                
+                return {
+                    ...point,
+                    x: point.x + (x - point.x) * time,
+                    y: point.y + (y - point.y) * time,
+                };
+            });
+        }
+        
+        // Component definitions
+        function NeuronConnections({ selectedNeuron, animating, instant, visibleNeurons, getNeuronPosition, weights }) {
+            let connections = [];
+            
+            for (let layerIndex = 1; layerIndex < visibleNeurons.length; layerIndex++) {
+                const layer = visibleNeurons[layerIndex];
+                
+                const prevLayerIndex = layerIndex - 1;
+                const prevLayer = visibleNeurons[prevLayerIndex];
+                
+                layer.forEach((neuronId, neuronIndex) => {
+                    if (neuronId === null) return;
+                    
+                    prevLayer.forEach((prevNeuronId, prevNeuronIndex) => {
+                        if (prevNeuronId === null) return;
+                        
+                        const weight = weights[prevLayerIndex][neuronId][prevNeuronId];
+                        
+                        const layerIsHighlighted = selectedNeuron?.layerIndex === layerIndex;
+                        
+                        const neuronIsHighlighted =
+                            layerIsHighlighted && selectedNeuron?.neuronId === neuronId;
+                        
+                        const maxAlpha = neuronIsHighlighted
+                            ? 1.0
+                            : layerIsHighlighted
+                            ? 0.1
+                            : 0.3;
+                        const alpha = maxAlpha * Math.abs(weight * 0.6);
+                        const color =
+                            weight < 0
+                                ? `rgba(252, 98, 85, ${alpha})`
+                                : `rgba(88, 196, 221, ${alpha})`;
+                        const lineWidth = neuronIsHighlighted ? 3 : 1;
+                        
+                        const prevNeuronPos = getNeuronPosition(
+                            prevLayerIndex,
+                            prevNeuronIndex
+                        );
+                        const nextNeuronPos = getNeuronPosition(layerIndex, neuronIndex);
+                        
+                        const lineLength = Math.hypot(
+                            prevNeuronPos.x - nextNeuronPos.x,
+                            prevNeuronPos.y - nextNeuronPos.y
+                        );
+                        
+                        const thisLineCanAnimate =
+                            (prevNeuronId * layer.length + neuronId) % 7 === 2;
+                        
+                        connections.push(
+                            React.createElement('line', {
+                                key: `${prevLayerIndex}-${prevNeuronId}-${layerIndex}-${neuronId}`,
+                                x1: prevNeuronPos.x,
+                                x2: nextNeuronPos.x,
+                                y1: prevNeuronPos.y,
+                                y2: nextNeuronPos.y,
+                                stroke: color,
+                                strokeWidth: lineWidth
+                            })
+                        );
+                        
+                        if (thisLineCanAnimate && !instant) {
+                            connections.push(
+                                React.createElement('line', {
+                                    key: `${prevLayerIndex}-${prevNeuronId}-${layerIndex}-${neuronId}-anim`,
+                                    x1: prevNeuronPos.x,
+                                    x2: nextNeuronPos.x,
+                                    y1: prevNeuronPos.y,
+                                    y2: nextNeuronPos.y,
+                                    stroke: "rgba(255, 255, 0, 0.5)",
+                                    strokeWidth: lineWidth,
+                                    strokeDasharray: `${lineLength} ${lineLength}`,
+                                    strokeDashoffset: (animating ? -1 : 1) * lineLength,
+                                    style: {
+                                        transition: animating
+                                            ? `stroke-dashoffset 1200ms ease-in-out ${
+                                                1200 * (layerIndex - 1) + 500 + 100 * Math.random()
+                                            }ms`
+                                            : "none",
+                                    }
+                                })
+                            );
+                        }
+                    });
+                });
+            }
+            
+            return React.createElement('g', {}, connections);
+        }
+        
+        function Neurons({ neurons, selectedNeuron, setSelectedNeuron, animating, instant, visibleNeurons, getNeuronPosition }) {
+            const neuronElements = [];
+            
+            visibleNeurons.forEach((layer, layerIndex) => {
+                layer.forEach((neuronId, neuronIndex) => {
+                    if (neuronId === null) return;
+                    
+                    const neuronValue = neurons[layerIndex][neuronId];
+                    const grayValue = Math.floor(255 * neuronValue);
+                    const fill = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                    
+                    const neuronPos = getNeuronPosition(layerIndex, neuronIndex);
+                    
+                    const isSelected =
+                        selectedNeuron &&
+                        selectedNeuron.layerIndex === layerIndex &&
+                        selectedNeuron.neuronId === neuronId;
+                    
+                    neuronElements.push(
+                        React.createElement('circle', {
+                            key: `${layerIndex}-${neuronId}`,
+                            cx: neuronPos.x,
+                            cy: neuronPos.y,
+                            r: "10",
+                            stroke: isSelected ? "yellow" : "white",
+                            strokeWidth: isSelected ? 2 : 1,
+                            style: {
+                                fill: animating || instant ? fill : "black",
+                                transition:
+                                    animating && !instant
+                                        ? `fill 600ms ease-in-out ${1200 * layerIndex + 100}ms`
+                                        : "none",
+                                cursor: "pointer",
+                            },
+                            onClick: () => {
+                                if (isSelected) {
+                                    setSelectedNeuron(null);
+                                } else {
+                                    setSelectedNeuron({ layerIndex, neuronId });
+                                }
+                            }
+                        })
+                    );
+                });
+            });
+            
+            return React.createElement('g', {}, neuronElements);
+        }
+        
+        function WinningOutputNeuronBox({ neurons, animating, instant, getNeuronPosition }) {
+            const winningValue = Math.max(...neurons[3]);
+            const winningNeuron = neurons[3].indexOf(winningValue);
+            const position = getNeuronPosition(3, winningNeuron);
+            
+            return React.createElement('rect', {
+                x: position.x - 18,
+                y: position.y - 16,
+                width: 56,
+                height: 32,
+                stroke: "yellow",
+                strokeWidth: "2",
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+                fill: "none",
+                strokeDasharray: "176 176",
+                strokeDashoffset: (animating || instant ? 0 : 1) * 176,
+                style: {
+                    transition: animating
+                        ? `stroke-dashoffset 800ms ease-in-out ${instant ? "0ms" : "4500ms"}`
+                        : "none",
+                }
+            });
+        }
+        
+        function OutputDigitLabels({ visibleNeurons, getNeuronPosition }) {
+            const labels = visibleNeurons[visibleNeurons.length - 1].map((neuronId, neuronIndex) => {
+                const position = getNeuronPosition(visibleNeurons.length - 1, neuronIndex);
+                
+                return React.createElement('text', {
+                    key: neuronId,
+                    x: position.x + 25,
+                    y: position.y + 2,
+                    style: { fill: "white" },
+                    fontSize: "20",
+                    dominantBaseline: "middle",
+                    textAnchor: "middle"
+                }, neuronId);
+            });
+            
+            return React.createElement('g', {}, labels);
+        }
+        
+        function VerticalEllipsis({ cx = 0, cy = 0 }) {
+            return React.createElement('g', {}, [
+                React.createElement('circle', { key: 1, cx, cy: cy - 12, r: "3", fill: "white" }),
+                React.createElement('circle', { key: 2, cx, cy, r: "3", fill: "white" }),
+                React.createElement('circle', { key: 3, cx, cy: cy + 12, r: "3", fill: "white" })
+            ]);
+        }
+        
+        function PiCreature({ animating, instant }) {
+            // Simplified Pi creature for now - just return a placeholder
+            return React.createElement('g', {
+                transform: "translate(30 340) scale(0.4)",
+                style: {
+                    opacity: instant ? 0.0 : animating ? 0.0 : 1.0,
+                    transition: animating && !instant ? "opacity 0ms linear 5000ms" : "none",
+                }
+            }, [
+                React.createElement('circle', {
+                    key: "pi",
+                    cx: 50,
+                    cy: 50,
+                    r: 30,
+                    fill: "#0C7F99",
+                    stroke: "white",
+                    strokeWidth: 2
+                }),
+                React.createElement('text', {
+                    key: "pi-text",
+                    x: 50,
+                    y: 55,
+                    fill: "white",
+                    fontSize: "24",
+                    textAnchor: "middle",
+                    dominantBaseline: "middle"
+                }, "π")
+            ]);
+        }
+        
+        function WeightGrid({ x, y, width, height, weights, inputNeurons }) {
+            const maxWeight = Math.max(...weights.map(Math.abs));
+            
+            const weightRects = weights.map((weight, n) => {
+                const weightX = n % 28;
+                const weightY = Math.floor(n / 28);
+                
+                const alpha = Math.abs(weight / maxWeight) ** 0.3;
+                const color =
+                    weight < 0
+                        ? `rgba(252, 98, 85, ${alpha})`
+                        : `rgba(88, 196, 221, ${alpha})`;
+                
+                return React.createElement('rect', {
+                    key: `weight-${n}`,
+                    x: weightX,
+                    y: weightY,
+                    width: "1",
+                    height: "1",
+                    fill: color
+                });
+            });
+            
+            const inputWeightRects = weights.map((weight, n) => {
+                const weightX = n % 28;
+                const weightY = Math.floor(n / 28);
+                
+                const alpha = Math.abs(weight / maxWeight) ** 0.3 * inputNeurons[n];
+                const color =
+                    weight < 0
+                        ? `rgba(252, 98, 85, ${alpha})`
+                        : `rgba(88, 196, 221, ${alpha})`;
+                
+                return React.createElement('rect', {
+                    key: `input-weight-${n}`,
+                    x: 32 + weightX,
+                    y: weightY,
+                    width: "1",
+                    height: "1",
+                    fill: color
+                });
+            });
+            
+            return React.createElement('g', {
+                transform: `translate(${x} ${y}) scale(${width / 28} ${height / 28})`
+            }, [
+                React.createElement('rect', {
+                    key: "bg1",
+                    x: "-1",
+                    y: "-1",
+                    width: "30",
+                    height: "30",
+                    fill: "black",
+                    stroke: "yellow",
+                    strokeWidth: "0.5"
+                }),
+                ...weightRects,
+                React.createElement('rect', {
+                    key: "bg2",
+                    x: "31",
+                    y: "-1",
+                    width: "30",
+                    height: "30",
+                    fill: "black",
+                    stroke: "yellow",
+                    strokeWidth: "0.5"
+                }),
+                ...inputWeightRects
+            ]);
+        }
+        
+        function ImageGrid({
+            x, y, width, height, points, setPoints, normalizing, isNormalized,
+            normalizePointsAnimated, instant, editing, startEditing, beginAnimation, highlightedTile
+        }) {
+            const [dragging, setDragging] = useState(false);
+            
+            const fillAtPoint = useCallback((x, y, drag) => {
+                setPoints((points) => {
+                    let newPoints = [];
+                    if (drag && points.length > 0) {
+                        const prevPoint = points[points.length - 1];
+                        for (let d = 1; d <= 2; d++) {
+                            newPoints.push({
+                                x: prevPoint.x + (x - prevPoint.x) * (d / 3),
+                                y: prevPoint.y + (y - prevPoint.y) * (d / 3),
+                            });
+                        }
+                    }
+                    
+                    newPoints.push({ x, y });
+                    
+                    return [...points, ...newPoints];
+                });
+            }, [setPoints]);
+            
+            const fillAtClientPixel = useCallback((screenX, screenY, target, drag) => {
+                const rect = target.getBoundingClientRect();
+                const x = ((screenX - rect.left) / (rect.right - rect.left)) * 28;
+                const y = ((screenY - rect.top) / (rect.bottom - rect.top)) * 28;
+                
+                fillAtPoint(x, y, drag);
+            }, [fillAtPoint]);
+            
+            const fillAtEventLocation = useCallback((event, drag) => {
+                if (event.touches) {
+                    for (const touch of event.touches) {
+                        fillAtClientPixel(touch.clientX, touch.clientY, event.target, drag);
+                    }
+                } else {
+                    fillAtClientPixel(event.clientX, event.clientY, event.target, drag);
+                }
+            }, [fillAtClientPixel]);
+            
+            const onMouseUp = useCallback((event) => {
+                setDragging(false);
+            }, []);
+            
+            const onMouseDown = useCallback((event) => {
+                if (editing) {
+                    setDragging(true);
+                    fillAtEventLocation(event);
+                    event.preventDefault();
+                }
+            }, [editing, fillAtEventLocation]);
+            
+            const onMouseMove = useCallback((event) => {
+                if (dragging && editing) {
+                    fillAtEventLocation(event, true);
+                    event.preventDefault();
+                }
+            }, [dragging, editing, fillAtEventLocation]);
+            
+            const onClick = useCallback(() => {
+                if (!editing) {
+                    startEditing();
+                }
+            }, [editing, startEditing]);
+            
+            useEffect(() => {
+                document.addEventListener("mouseup", onMouseUp);
+                document.addEventListener("touchend", onMouseUp);
+                return () => {
+                    document.removeEventListener("mouseup", onMouseUp);
+                    document.removeEventListener("touchend", onMouseUp);
+                };
+            }, [onMouseUp]);
+            
+            const values = useMemo(() => getInputNeuronValues(points), [points]);
+            const isEmpty = !values.some((value) => value > 0.1);
+            
+            const gridTiles = values.map((value, n) => {
+                const tileX = n % 28;
+                const tileY = Math.floor(n / 28);
+                
+                return React.createElement('rect', {
+                    key: `${tileX}-${tileY}`,
+                    x: (tileX * 400) / 28,
+                    y: (tileY * 400) / 28,
+                    width: 400 / 28,
+                    height: 400 / 28,
+                    fill: `rgba(255, 255, 255, ${value})`,
+                    stroke: highlightedTile === n ? "yellow" : "none",
+                    strokeWidth: "2"
+                });
+            });
+            
+            return React.createElement('g', {
+                style: {
+                    transform: `translate(${x}px, ${y}px) scale(${width / 400}, ${height / 400})`,
+                    transition: "all 500ms ease-in-out",
+                }
+            }, [
+                React.createElement('rect', { key: "bg", x: 0, y: 0, width: 400, height: 400, fill: "black" }),
+                
+                React.createElement('g', { key: "tiles" }, gridTiles),
+                
+                React.createElement('g', {
+                    key: "preprocessing",
+                    style: {
+                        opacity: normalizing ? 1.0 : 0.0,
+                        pointerEvents: "none",
+                        transition: "opacity 200ms ease-in-out",
+                    }
+                }, [
+                    React.createElement('rect', {
+                        key: "preprocessing-bg",
+                        x: 50, y: 0, width: 300, height: 80,
+                        fill: "rgba(0, 0, 0, 0.6)"
+                    }),
+                    React.createElement('text', {
+                        key: "preprocessing-text",
+                        x: 200, y: 50,
+                        dominantBaseline: "middle",
+                        textAnchor: "middle",
+                        fill: "yellow",
+                        fontFamily: "sans-serif",
+                        fontSize: "36"
+                    }, "Pre-processing...")
+                ]),
+                
+                React.createElement('rect', {
+                    key: "interaction",
+                    x: 0, y: 0, width: 400, height: 400,
+                    stroke: "#61BAD6",
+                    strokeWidth: "2",
+                    rx: "2",
+                    fill: "transparent",
+                    style: {
+                        cursor: editing ? "crosshair" : "pointer",
+                    },
+                    onClick,
+                    onMouseDown,
+                    onTouchStart: onMouseDown,
+                    onMouseMove,
+                    onTouchMove: onMouseMove
+                }),
+                
+                React.createElement('g', {
+                    key: "controls",
+                    transform: "translate(0 410)",
+                    style: {
+                        opacity: editing ? 1.0 : 0.0,
+                        pointerEvents: editing ? undefined : "none",
+                        transition: "opacity 500ms ease-in-out",
+                    }
+                }, [
+                    React.createElement('g', { key: "clear" }, [
+                        React.createElement('rect', {
+                            key: "clear-bg",
+                            x: 0, y: 0, width: 150, height: 60,
+                            tabIndex: "0", rx: 3,
+                            onClick: () => {
+                                if (!isEmpty) {
+                                    setPoints([]);
+                                }
+                            },
+                            style: {
+                                fill: "#C7E9F1",
+                                cursor: isEmpty ? "default" : "pointer",
+                                opacity: isEmpty ? 0.5 : 1.0,
+                            }
+                        }),
+                        React.createElement('text', {
+                            key: "clear-text",
+                            x: "75", y: "32",
+                            dominantBaseline: "middle",
+                            textAnchor: "middle",
+                            fill: "black",
+                            fontFamily: "sans-serif",
+                            fontSize: "24",
+                            style: {
+                                pointerEvents: "none",
+                                opacity: isEmpty ? 0.5 : 1.0,
+                            }
+                        }, "Clear")
+                    ]),
+                    
+                    !instant ? React.createElement('g', { key: "animate" }, [
+                        React.createElement('rect', {
+                            key: "animate-bg",
+                            x: 200, y: 0, width: 200, height: 60,
+                            tabIndex: "0", rx: 3,
+                            onClick: () => {
+                                if (!isEmpty) {
+                                    beginAnimation();
+                                }
+                            },
+                            style: {
+                                fill: "#1C758A",
+                                cursor: isEmpty ? "default" : "pointer",
+                                opacity: isEmpty ? 0.5 : 1.0,
+                            }
+                        }),
+                        React.createElement('text', {
+                            key: "animate-text",
+                            x: "300", y: "32",
+                            dominantBaseline: "middle",
+                            textAnchor: "middle",
+                            fill: "white",
+                            fontFamily: "sans-serif",
+                            fontSize: "24",
+                            style: {
+                                pointerEvents: "none",
+                                opacity: isEmpty ? 0.5 : 1.0,
+                            }
+                        }, "Check digit")
+                    ]) : React.createElement('g', { key: "process" }, [
+                        React.createElement('rect', {
+                            key: "process-bg",
+                            x: 200, y: 0, width: 200, height: 60,
+                            tabIndex: "0", rx: 3,
+                            onClick: () => {
+                                if (!(isEmpty || isNormalized)) {
+                                    normalizePointsAnimated(1);
+                                }
+                            },
+                            style: {
+                                fill: "#1C758A",
+                                cursor: isEmpty || isNormalized ? "default" : "pointer",
+                                opacity: isEmpty || isNormalized ? 0.5 : 1.0,
+                            }
+                        }),
+                        React.createElement('text', {
+                            key: "process-text",
+                            x: "300", y: "32",
+                            dominantBaseline: "middle",
+                            textAnchor: "middle",
+                            fill: "white",
+                            fontFamily: "sans-serif",
+                            fontSize: "24",
+                            style: {
+                                pointerEvents: "none",
+                                opacity: isEmpty || isNormalized ? 0.5 : 1.0,
+                            }
+                        }, "Pre-process")
+                    ])
+                ])
+            ]);
+        }
+        
+        // Render the app
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
