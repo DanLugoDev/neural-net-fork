@@ -397,21 +397,17 @@ export default class Network {
 
       const networkOutput : Vec = this.feedforward(inputVector)
 
-      const digitPredicted : number = networkOutput.reduce(
-        (max : number, value : number) => Math.max(max, value),
-        0
-      )
+     
 
+      const biggestActivation = Math.max(...networkOutput)
+
+      const digitPredicted : number = networkOutput.indexOf(biggestActivation)
       console.log(`Digit predicted: ${digitPredicted}`)
 
       testResults.push(digitPredicted == expectedDigit)
     }
 
 
-    return testResults.reduce(
-      // Number(true) => 1 , Number(false) => 0
-      (counter : number, result : boolean) => counter + Number(result),
-      0
-    )
+    return testResults.filter(Boolean).length
   }
 }
