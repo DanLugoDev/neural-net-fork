@@ -8,11 +8,12 @@
     "declarationDir": "built",
     "downlevelIteration": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "commonjs",
-    "moduleResolution": "Node",
+    "module": "es6",
+    "moduleResolution": "node",
     "newLine": "crlf",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
+    "lib": ["ES5", "ES2015"],
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
@@ -28,6 +29,11 @@
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "target": "ES6"
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
   },
   "include": [
     "src/**/*"

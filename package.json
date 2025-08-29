@@ -20,7 +20,7 @@
     "@types/ramda": "^0.25.8",
     "@types/underscore": "^1.8.5",
     "ts-loader": "^3.1.0",
-    "ts-node": "^3.3.0",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^2.3.0",
     "typescript": "^2.6.1"
   },
