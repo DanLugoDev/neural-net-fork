@@ -163,7 +163,7 @@ export default class Network {
    * training inputs and the desired outputs.
    * @param epochs
    * @param miniBatchSize
-   * @param eta
+   * @param eta The learning rate.
    * @param testData If provided then the network will be evaluated
    * against the test data after each epoch, and partial progress printed out.
    * This is useful for tracking progress, but slows things down substantially.
