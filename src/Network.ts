@@ -179,9 +179,10 @@ export default class Network {
       const shuffled : InOut[] = shuffle(trainingData)
       const miniBatches : InOut[][] = splitEvery(miniBatchSize, shuffled)
 
-      for (const miniBatch of miniBatches) {
+      miniBatches.forEach((miniBatch, i, _) => {
+        console.log(`Processing mini-batch ${i+1} out of ${_.length}`)
         this.updateMiniBatch(miniBatch, eta)
-      }
+      })
 
       if (testData) {
         console.log(`Epoch ${i}: ${this.evaluate(testData)} numbers correctly identified out of ${testData.length} `)
