@@ -1,22 +1,21 @@
-import { transpose, zipWith, splitEvery, range, tail, init, head, last } from 'ramda'
+import { transpose, zipWith, splitEvery, range,
+         tail, init, head, last }               from 'ramda'
+import { shuffle }                               from 'underscore'
 
-
-
-import { sigmoid, sigmoidPrime }                from '@app/Math'
-import { InOut, InDigit }                       from '@app/Data'
-import { shuffle }                              from 'underscore'
 import { FillFn, Vec, newVec, isVec, Mat,
          newMat, vecPlusVec, scalarTimesVec,
          scalarTimesMat, matPlusMat,
          matMinusMat, vecMinusVec, vecTimesMat,
-         hadamard, dot }                             from '@app/Algebra'
+         hadamard, dot }                        from '@app/Algebra'
+import { InOut, InDigit }                       from '@app/Data'
+import { sigmoid, sigmoidPrime }                from '@app/Math'
 
-const gaussian = require('gaussian')
+import * as gaussian from 'gaussian'
 // mean 0 variance 1
 const distribution = gaussian(0, 1)
 /**
  * Take a random sample using inverse transform sampling method.
- * @returns {number} the random sample
+ * @returns the random sample
  */
 const sample = () : number => distribution.ppf(Math.random())
 
@@ -30,11 +29,10 @@ export default class Network {
    * Dan: Create an array of Vectors, representing the biases of each
    * hidden layer + the output layer of the neural network.
    *
-   * @param {Vec} sizes Vector representing the size of each layer of the
+   * @param sizes Vector representing the size of each layer of the
    * network including the input layer (biases wont be created for this layer).
-   * @param {FillFn=} fillFn (optional) function returning a number to
+   * @param fillFn (optional) function returning a number to
    * initialize each bias
-   * @returns {Vec[]}
    */
   private static spawnBiases (sizes : Vec, fillFn? : FillFn) : Vec[] {
     // Dan: ignore the first element of the sizes vector as this is the
@@ -59,9 +57,9 @@ export default class Network {
    * zip the tail and init of the sizes vector (IN THAT ORDER) the two numbers
    * are the dimensions of the weights matrix for each layer.
    *
-   * @param {Vec} sizes the sizes of all layers in the network, including the
+   * @param sizes the sizes of all layers in the network, including the
    * input layer's size
-   * @param {FillFn} fillFn (optional) function returning a number to
+   * @param fillFn (optional) function returning a number to
    * initialize each weight
    */
   private static spawnWeights (sizes : Vec, fillFn? : FillFn) : Mat[] {
@@ -77,14 +75,13 @@ export default class Network {
 
   /**
    * The number of layers in the neural network
-   * @type {number}
+
    */
   private readonly numLayers : number
 
 
   /**
    * One vector for each layer (variable length), one bias for each neuron
-   * @type {Vec[]}
    */
   private biases : Vec[]
 
@@ -94,14 +91,12 @@ export default class Network {
    * inside each matrix: one vector for each neuron
    * (all vectors same length, vector length same as amount of neurons of
    * the previous layer)
-   * @type {Mat[]}
    */
   private weights : Mat[]
 
 
   /**
    * A vector with the sizes of each layer.
-   * @type {Vec}
    */
   private readonly sizes : Vec
 
@@ -132,7 +127,7 @@ export default class Network {
   /**
    * Return the output of the network given an input.
    *
-   * @param {Vec} input Vector to the neural network
+   * @param input Vector to the neural network
    */
   feedforward (input : Vec) : Vec {
     if (!isVec(input)) throw new TypeError('expected vector as argument')
@@ -164,14 +159,14 @@ export default class Network {
   /**
    * Train the neural network using mini-batch stochastic gradient descent.
    *
-   * @param {InOut[]} trainingData List of tuples "[x, y]" representing the
+   * @param trainingData List of tuples "[x, y]" representing the
    * training inputs and the desired outputs.
-   * @param {number} epochs
-   * @param {number} miniBatchSize
-   * @param {number} eta
-   * @param {InDigit[]=} testData If provided then the network will be eavaluated
+   * @param epochs
+   * @param miniBatchSize
+   * @param eta
+   * @param testData If provided then the network will be evaluated
    * against the test data after each epoch, and partial progress printed out.
-   * This is useful for tracking progress, but slows things down subtantially.
+   * This is useful for tracking progress, but slows things down substantially.
    */
   SGD (
     trainingData : InOut[],
@@ -199,7 +194,7 @@ export default class Network {
 
   /**
    * Update the network's weights and biases by applying gradient descent using
-   * backpropagation to a single mini batch.
+   * back-propagation to a single mini batch.
    * @param miniBatch List of tuples "[x, y]" representing the training
    * inputs and the desired outputs. A subset of all training examples.
    * @param eta The learning rate

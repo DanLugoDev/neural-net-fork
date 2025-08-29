@@ -1,13 +1,11 @@
+import * as fs from 'fs'
 import { zipWith, range, tail, init, last, transpose } from 'ramda'
 
-import { sigmoid, sigmoidPrime }                from '@app/Math'
+import { sigmoid, sigmoidPrime }                       from '@app/Math'
 import { Vec, newVec, Mat,
          newMat, vecPlusVec, scalarTimesVec,
          vecMinusVec, vecTimesMat,
-         hadamard, dot }                             from '@app/Algebra'
-
-
-const fs = require('fs')
+         hadamard, dot }                               from '@app/Algebra'
 
 let entry : Vec
 let sizes : Vec
@@ -16,6 +14,7 @@ let biases : Vec[]
 let weights : Mat[]
 let expectedOut : Vec
 
+// @ts-ignore
 let data = JSON.parse(fs.readFileSync('test-parameters.json'))
 
 entry = data.entry

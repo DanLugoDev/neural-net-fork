@@ -1,8 +1,8 @@
+import * as fs from 'fs'
 import { zipWith, tail, init } from 'ramda'
 
 import { FillFn, Vec, newVec, Mat, newMat} from '@app/Algebra'
 
-const fs = require('fs')
 
 const gaussian = require('gaussian')
 // mean 0 variance 1

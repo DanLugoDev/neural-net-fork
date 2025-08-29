@@ -5,16 +5,10 @@
  * and ``load_data_wrapper``.  In practice, ``load_data_wrapper`` is the
  * function usually called by our neural network code.
  */
-
-
-
-
-const fs = require('fs')
-
+import * as fs from 'fs'
 import { zipWith } from 'ramda'
 
 import { Vec, newVec } from '@app/Algebra'
-
 
 
 // Given an input vector, which vector should the output layer be?
@@ -30,8 +24,8 @@ type RawData = [Vec[], number[]]
 /**
  * vectorize(5, 3) => [0, 0, 0, 1, 0]
  *
- * @param {number} len length of the resulting Vec
- * @param {number} n the number, also de index where the 1 will be positioned
+ * @param len length of the resulting Vec
+ * @param n the number, also de index where the 1 will be positioned
  */
 export const vectorize = (len : number, n : number) : Vec => {
   if (n >= len) throw new RangeError()
@@ -75,8 +69,6 @@ export const loadData = () : [RawData, RawData, RawData] => {
     test_data : RawData
   }
 
-
-
   try {
     buffer = fs.readFileSync('data/mnist.json')
   } catch (e) {
@@ -89,18 +81,12 @@ export const loadData = () : [RawData, RawData, RawData] => {
     throw new Error('couldnt parse the data  ' + e.message)
   }
 
-
-
-
-
-
   trainingData = data.training_data
   validationData = data.validation_data
   testData = data.test_data
 
   return [ trainingData , validationData , testData ]
 }
-
 
 /**
  * Return a tuple containing ``(training_data, validation_data, test_data)``.
@@ -123,9 +109,6 @@ export const loadData = () : [RawData, RawData, RawData] => {
  */
 export const loadDataWrapper = () : [InOut[], InDigit[], InDigit[]] => {
   let [ trD, vD, teD ] = loadData()
-
-  let triple : [InOut[], InDigit[], InDigit[]]
-  // type RawData = [Vec[], number[]]
 
   const convertTrD = (origTrD : RawData) : InOut[] => {
     const images : Vec[] = origTrD[0]

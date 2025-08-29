@@ -1,10 +1,11 @@
-import { propEq, head, zipWith, add, multiply, subtract, all, is, transpose } from 'ramda'
+import { propEq, head, zipWith, add,
+         multiply, subtract, all, is, transpose }                   from 'ramda'
 
 export type FillFn = () => number
 
 /**
  * Always returns zero.
- * @returns {number} zero
+ * @returns zero
  */
 export const zero : FillFn = () => 0
 
@@ -34,12 +35,11 @@ const allSameLength = (list : any[]) : boolean =>  {
   return all(propEq('length', len))(list)
 }
 
-
 /**
  * Create a new Vec.
  *
- * @param {number} length length of the resulting Vec
- * @param {FillFn=} fillFn returns a number to fill each index with
+ * @param length length of the resulting Vec
+ * @param fillFn returns a number to fill each index with
  */
 export const newVec =
   (length : number, fillFn : FillFn = zero) : Vec =>
@@ -47,42 +47,30 @@ export const newVec =
       .fill(null)
       .map(fillFn)
 
-
-
-
-
 //TODO: change booleans to tensor is X
 /**
  * Check the Tensor provided is a valid Vec.
  *
- * @param {Tensor} tensor The tensor to be checked if it's a Vec
+ * @param tensor The tensor to be checked if it's a Vec
  */
 export const isVec =
   (tensor : Tensor) : boolean =>
     all(is(Number))(tensor)
 
-
 /**
  * Check the Tensor provided is a valid Mat.
  *
- * @param {Tensor} tensor The tensor to be checked if it's a Mat
+ * @param tensor The tensor to be checked if it's a Mat
  */
 export const isMat =
   (tensor : Tensor) : boolean =>
     all(isVec, tensor) && allSameLength(tensor)
-
-
 
 export const newMat =
   (rows : number, cols : number, fillFn : FillFn = zero) : Mat =>
     (new Array(rows))
       .fill(null)
       .map(_ => newVec(cols, fillFn))
-
-
-
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // VECTOR OPERATIONS
@@ -95,14 +83,12 @@ export const vecPlusVec = (v : Vec, w : Vec) : Vec => {
   return zipWith<number, number, number>(add, v, w)
 }
 
-
 export const vecMinusVec = (v : Vec, w : Vec) : Vec => {
   if (!isVec(v) || !isVec(w)) {
     throw new TypeError('Expected Vecs as arguments')
   }
   return zipWith<number, number, number>(subtract, v, w)
 }
-
 
 export const scalarTimesVec = (s : number, v : Vec) : Vec => {
 
@@ -112,7 +98,6 @@ export const scalarTimesVec = (s : number, v : Vec) : Vec => {
   return v.map(elm => elm * s)
 }
 
-
 export const hadamard = (v : Vec, w : Vec) : Vec => {
   if (!isVec(v) || !isVec(w)) {
     throw new TypeError('Expected Vecs as arguments')
@@ -121,9 +106,7 @@ export const hadamard = (v : Vec, w : Vec) : Vec => {
   return zipWith<number, number, number>(multiply, v, w)
 }
 
-
 export const schur = hadamard
-
 
 export const dot = (v : Vec, w : Vec) : number => {
   if (!isVec(v) || !isVec(w)) {
@@ -131,7 +114,6 @@ export const dot = (v : Vec, w : Vec) : number => {
   }
   return hadamard(v, w).reduce(add, 0)
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // VECTOR AND MATRIX OPERATIONS
@@ -147,14 +129,12 @@ export const vecTimesMat = (v : Vec, m : Mat) : Vec => {
 ////////////////////////////////////////////////////////////////////////////////
 // MATRIX OPERATIONS
 ////////////////////////////////////////////////////////////////////////////////
-
 export const matPlusMat = (m : Mat, n : Mat) : Mat => {
   if (!isMat(m) || !isMat(n)) {
     throw new TypeError('Expected two matrices as arguments')
   }
   return zipWith<Vec, Vec, Vec>(vecPlusVec, m, n)
 }
-
 
 export const matMinusMat = (m : Mat, n : Mat) : Mat => {
   if (!isMat(m) || !isMat(n)) {
@@ -163,14 +143,12 @@ export const matMinusMat = (m : Mat, n : Mat) : Mat => {
   return zipWith<Vec, Vec, Vec>(vecMinusVec, m, n)
 }
 
-
 export const scalarTimesMat = (s : number, m : Mat) : Mat => {
   if ((typeof s != 'number') || !isMat(m)) {
     throw new TypeError('Expected a number and a matrix as arguments')
   }
   return m.map( row => scalarTimesVec(s, row) )
 }
-
 
 export const matTimesMat = (m : Mat, n : Mat) : Mat => {
   if (!isMat(m) || !isMat(n)) {
